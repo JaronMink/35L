@@ -1,0 +1,232 @@
+To start we first need to make a word bank filled with sorted english words.
+To do this we sort the contents of the file /usr/share/dict/words which is on
+seas. We then put it in the file called words using redirection.  Keep in mind
+this will be sorted by the C convention of comparting strings which is based on
+their numerical ascii value which differs from their ordering in an alphabetic
+sort.  The command to do this all is: cat /usr/share/dict/words | sort
+>words.txt
+
+this sucessfully made the file and inputed the sorted contents into it.
+
+I then created a txt file containing the HTML of this webpage through the
+command
+
+curl web.cs.ucla.edu/classes/winter17/cs35L/assign/assign2.html >assign2.txt
+
+I then began performing the commands cat assign2.txt | tr -c 'A-Za-z' '[\n*]
+
+using the man files, it turns out that the the -c option means perform the
+replacement/tranlsation of the characters on the complement of the first set.
+IE, this goes through the entire file character by character, checks whether
+the character is in the complement of the set A-Za-z (basically if the
+character is not a letter) and replaces it with a new line character. All
+symbols, and other non-english characters were replaced with a newline. It then
+printed this on the screen in the terminal.  On my screen it printing various
+whole words with no symbols with multiple lines in between each one.
+
+cat assign2.txt | tr -cs 'A-Za-z' '[\n*]
+
+again using the man files, the addition -s option (squeeze repeats) replaces a
+sequence of characters in the first set with only a single of the replacement
+characters. So given multiple symbols in a row that were not english letters,
+only a single newline replaced them instead of multiple. Now, what is printed
+on my terminal is whole english words and letters without any symbols with only
+a single newline, thus the each word was on its own line, without any blank
+lines in between any of them.
+
+cat assign1.txt | tr -cs 'A-Za-z' '[\n*]' | sort
+
+this redirection of output now makes the stdout of tr, insteead of being
+printed onto the terminal, go into sort which then sorts to the C standard
+sorting procedure and again since it does not contain any place to print its
+output, by default it prints the sorted list onto the screen, each line
+consisting of a word and a single newline character, without any blank lines
+seperating them.
+
+After looking at the man pages, -u(unique) only outputs "the first of an equal
+run". I assume this roughly means that equivalent words will not be repeated in
+the sort output.
+
+cat assign2.txt | tr -cs 'A-Za-z' '[\n*]' | sort -u
+
+and it turns out I was right. Only a single instance of each word was outputed
+with a single newline on each line directly following the words. At a high
+level, this command now prints a set of all the words contained within txt
+file, sorted to the C specification.
+
+the comm command compares two files line by line.  cat assign2.txt | tr -cs
+'A-Za-z' '[\n*]' | sort -u | comm - words
+
+The comm creates 3 columns, the first being lines(words) unique to file 1, the
+lines unique to file 2, and the lines common in both. the '-' representing the
+input, ie the words we sorted, is the file 1, while words is file 2.  Most
+words are in the second column as there more words in the dictionary than
+obviously within our file.
+
+cat assign2.txt | tr -cs 'A-Za-z' '[\n*] | sort -u | comm -23 - words
+
+Adding the -23 flags supresses the 2nd and 3rd column, thus this only display
+words that only appear in the first column which are words unique only to the
+first file(the hyphen which is the sorted outputed we made earlier). Like
+suggested online, this is somewhat of a spelling checker as it compares the
+words we inputted against a vary large amount of gramatically correct words and
+the only words that don't match are the ones that are outputted from this
+command.
+
+I then used wget mauimapp.com/moolelo/hwnwdsend.htm and changed the name to
+hwords after
+
+I now have to make a script to extract the hawaiian words from the file, remove
+all non-unique words, treat all uppercase as lowercase, reject non-hawaiian
+words, sort them, and write all of them to std out. This will get easiest using
+normal expressions which makes this search a lot simplier.
+
+I will first figure out the process of performing this change using commands
+and typing by hand but I will then translate it into a script once I have the
+foundation down.
+
+First of all lets delete all the execess, ie the header and the tail so there
+are less exceptions to worry about for the normal expression. To do this lets
+use the command
+
+head -n 985 <hwords >hwords which gets the first 985 lines, ie deletes the
+thing after the formal end of the last hawaiian word.
+
+tail -n 957 <hwords >hwords which gets the last 957 words only and thus deltes
+everything before the first formal hawaiian word
+
+Now left with only the meaty part of the html containing the words we need to
+begin to extract only the hawaiian words
+
+We will use sed which uses a regex to replace words, and in our case, we will
+replace everything with only the hawaiian words.
+
+Well, what do we know, we know that at least, each english to hawaiian
+translation will follow the format: <tr> <td>Eword</td> <td>Hword</td>
+
+For now we will just extract the word as is and perform multiple
+changes(uppercase to lowercase, ` to ', etc...) after we have only the hawaiian
+words left.
+
+the format to use sed is
+
+sed 's /regular expression/replacement/g' <hwords >hwords
+
+In the regular expression we will save the hawaiian word and drop everything
+else.
+
+sed 's/<tr>.*<td>.*</td>.*<td>(.+)</td>.*</tr>/\1/g'
+
+oops i forgot escape characters, changed to sed
+'s/<tr>.*<td>.*<\/td>.*<td>\(.+\)<\/td>.*<\/tr>/\1/g'
+
+this is giving me greedy matching and is matching to the whole file so I must
+be more restrictive on what I match with
+
+it turns out that isn't the problem at all, the problem is that it doesn't
+match with anything. This is due to sed not checking across multiple lines.
+Thus I will first delete all new lines in the file and replace with a space.
+
+cat hwords | tr -s '\n' ' ' > hwords
+
+Alright now we can use sed
+
+After some experimenting, it became clear that it would be hard to make an
+expression given just this input to extract all of the hawaiian words so I will
+try a different tactic.  After taking off the header and the footer of the
+html, I will first grep all the lines with <td>...</td> and then delete the
+lines based on if they contain an english word before them or not by using the
+"spell checker" we made before.
+
+Sadly, after checking the hawaiian words, some of the hawaiian words are also
+used in the english dictionary, thus words like hula, papa, hola, and others
+will accidentally be deleted thus I need a different way to seperate them.
+
+Well a hawaiian word always follows an english word thus if I can just somehow
+find out how to only keep every other line, I would have only lines containing
+hawaiian words left
+
+so given just the hawaiian words and the english translation without the header
+or the footer, we perform the command
+
+egrep '<td>.+<\/td>' <hwords >hwords
+
+we then want to remove every other line after searching for a bit of how to do
+this, we must use sed and the command to perform this is
+
+sed -n '1~2!p' <hwords >hwords
+
+this has successfully deleted all english words
+
+now to only keep the hawaiian word itself, we must use backtracing in sed
+
+sed 's/.*<td>\(.*\)<\/td>$/\1/g' <hwords >hwords
+
+this ensures that everything within <td> and </td> is saved and the other stuff
+is simply replaced
+
+we must now take out <u> all </u> while keeping everything else inside of it
+intact, therefore we just need to replace them with nothing
+
+sed 's/<u>//g' <hwords >hwords
+
+followed by
+
+sed 's/<\/u>//g'
+
+thus all of these are now gone leaving the words
+
+we now need to change all ` to ', this will be easy using tr
+
+tr '`' "'" <hwords >hwords
+
+now all ` are replaced with '. Time to make seperate words with commas or
+spaces in between them, again simple character means we use tr much like how we
+did in the beginning of the project.
+
+tr -s ', ' '[\n*]' <hwords >hwords
+
+and finally, all lowercase to uppercase
+
+tr '[:upper:]' '[:lower:]' <hwords >hwords
+
+now we just need to sort and remove duplicates
+
+
+sort -u <hwords >hwords
+
+and it should be done
+
+the script is
+
+#! /bin/sh head -n 985 | tail -n 957 | egrep '<td>.+<\/td>' | sed -n '1~2!p' |
+sed 's/.*<td>\(.*\)<\/td>$/\1/g' | sed 's/<u>//g\ ' | sed 's/<\/u>//g' | tr '`'
+"'" | tr -s ', ' '[\n*]' | tr -s '[:upper:]' '[:lower:]' | sort -u
+
+permission is denied so we must use chmod chmod u+x buildwords.sh
+
+ cat assign2.html | tr -cs 'A-Za-z' '[\n*]' | tr '[:upper:]' '[:lower:]' | sort
+-u | comm -23 - hwords > mispelledHawaiian.txt
+
+this gives us the "mispelled hawaiian words". Using the command wc -w
+mispelledHawaiian.txt it gives 405 mispelled words
+
+
+ cat assign2.html | tr -cs 'A-Za-z' '[\n*]' | tr '[:upper:]' '[:lower:]' | sort
+-u | comm -23 - words > mispelledEnglish.txt
+
+this gives us the "mispelled english words". Using the command wc -w
+mispelledEnglish.txt this gives us 38 mispelled words
+
+
+comm mispelledHawaiian.txt mispelledEnglish.txt
+
+this will give us three columns, one of mispelled Hawaiian that isn't in the
+mispelled English file, one of mispelled English that isn't in the mispelled
+Hawaiian file, and one that is mispelled by both dictionaries.
+
+Ex: mispelled in Hawaiian, not English occurrence, immediately, export
+
+Ex: mispelled in English, not Hawaiian lau, wiki, halau
+
+Ex: mispelled in both eggert, basedefs, moolelo, linux, seasnet, wikipedia

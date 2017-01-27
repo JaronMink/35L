@@ -1,0 +1,70 @@
+To start we first need to make a word bank filled with sorted english words.
+To do this we sort the contents of the file /usr/share/dict/words which
+is on seas. We then put it in the file called words using redirection.
+Keep in mind this will be sorted by the C convention of comparting strings
+which is based on their numerical ascii value which differs from their ordering
+in an alphabetic sort. 
+The command to do this all is:
+cat /usr/share/dict/words | sort >words.txt
+
+this sucessfully made the file and inputed the sorted contents into it.
+
+I then created a txt file containing the HTML of this webpage through the command
+
+curl web.cs.ucla.edu/classes/winter17/cs35L/assign/assign2.html >assign2.txt
+
+I then began performing the commands
+cat assign2.txt | tr -c 'A-Za-z' '[\n*]
+
+using the man files, it turns out that the the -c option means perform the
+replacement/tranlsation of the characters on the complement of the first set. IE, this
+goes through the entire file character by character, checks whether the character is in the complement of the set
+A-Za-z (basically if the character is not a letter) and replaces it with a new line character. All symbols, and
+other non-english characters were replaced with a newline. It then printed this on the screen in the terminal.
+On my screen it printing various whole words with no symbols with multiple lines in between each one.
+
+cat assign2.txt | tr -cs 'A-Za-z' '[\n*]
+
+again using the man files, the addition -s option (squeeze repeats) replaces a sequence of characters in the first
+set with only a single of the replacement characters. So given multiple symbols in a row that were not
+english letters, only a single newline replaced them instead of multiple. Now, what is printed on my terminal
+is whole english words and letters without any symbols with only a single newline, thus the each word was on
+its own line, without any blank lines in between any of them.
+
+cat assign2.txt | tr -cs 'A-Za-z' '[\n*]' | sort
+
+this redirection of output now makes the stdout of tr, insteead of being printed onto the terminal, go into
+sort which then sorts to the C standard sorting procedure and again since it does not contain any place to
+print its output, by default it prints the sorted list onto the screen, each line consisting of a word and
+a single newline character, without any blank lines seperating them.
+
+After looking at the man pages, -u(unique) only outputs "the first of an equal run". I assume this roughly means
+that equivalent words will not be repeated in the sort output.
+
+cat assign2.txt | tr -cs 'A-Za-z' '[\n*]' | sort -u
+
+and it turns out I was right. Only a single instance of each word was outputed with a single newline on each line
+directly following the words. At a high level, this command now prints a set of all the words contained within
+txt file, sorted to the C specification.
+
+the comm command compares two files line by line.
+cat assign2.txt | tr -cs 'A-Za-z' '[\n*]' | sort -u | comm - words
+
+The comm creates 3 columns, the first being lines(words) unique to file 1, the lines unique to file 2, and the lines
+common in both. the '-' representing the input, ie the words we sorted, is the file 1, while words is file 2.
+Most words are in the second column as there more words in the dictionary than obviously within our file.
+
+cat assign2.txt | tr -cs 'A-Za-z' '[\n*] | sort -u | comm -23 - words
+
+Adding the -23 flags supresses the 2nd and 3rd column, thus this only display words that only appear in the
+first column which are words unique only to the first file(the hyphen which is the sorted outputed we made
+earlier). Like suggested online, this is somewhat of a spelling checker as it compares the words we inputted
+against a vary large amount of gramatically correct words and the only words that don't match
+are the ones that are outputted from this command.
+
+I then used wget mauimapp.com/moolelo/hwnwdsend.htm
+and changed the name to hwords after
+
+I now have to make a script to extract the hawaiian words from the file, remove all non-unique words,
+treat all uppercase as lowercase, reject non-hawaiian words, sort them, and write all of them to
+std out. This will get easiest using normal expressions which makes this search a lot simplier.
